@@ -20,7 +20,9 @@ class AuthController extends Controller
     $validator = Validator::make($request->all(), [
       'name' => 'required|string|max:255',
       'email' => 'required|string|email|max:255|unique:users',
+      'phone' => 'nullable|string|max:20',
       'password' => 'required|string|min:6|confirmed',
+      'role' => 'sometimes|in:admin,member',
     ]);
 
     if ($validator->fails()) {
@@ -32,7 +34,10 @@ class AuthController extends Controller
     $user = User::create([
       'name' => $request->name,
       'email' => $request->email,
+      'phone' => $request->phone,
       'password' => Hash::make($request->password),
+      'role' => $request->input('role', 'member'),
+      'status' => 'active',
     ]);
 
     $token = auth('api')->login($user);
@@ -55,9 +60,23 @@ class AuthController extends Controller
       ], 422);
     }
 
-    if (!$token = auth('api')->attempt($credentials)) {
+    $user = User::where('email', $request->email)->first();
+
+    if (!$user || !Hash::check($request->password, $user->password)) {
       return response()->json([
         'error' => 'Invalid email or password'
+      ], 401);
+    }
+
+    if ($user->status !== 'active') {
+      return response()->json([
+        'error' => 'Your account is blocked. Please contact the administrator.'
+      ], 403);
+    }
+
+    if (!$token = auth('api')->attempt($credentials)) {
+      return response()->json([
+        'error' => 'Unable to log in with the provided credentials'
       ], 401);
     }
 
