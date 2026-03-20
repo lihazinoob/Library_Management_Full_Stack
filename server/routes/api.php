@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BookController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\Auth\AuthController;
 use Illuminate\Http\Request;
@@ -25,10 +26,14 @@ Route::prefix('auth')->group(function(){
 
 Route::middleware(['auth:api'])->group(function () {
     Route::get('/categories', [CategoryController::class, 'index']);
+    Route::get('/books', [BookController::class, 'index']);
 });
 
 Route::middleware(['auth:api', 'admin'])->group(function () {
     Route::post('/categories', [CategoryController::class, 'store']);
     Route::put('/categories/{category}', [CategoryController::class, 'update']);
     Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
+    Route::post('/books', [BookController::class, 'store']);
+    Route::put('/books/{book}', [BookController::class, 'update']);
+    Route::delete('/books/{book}', [BookController::class, 'destroy']);
 });
