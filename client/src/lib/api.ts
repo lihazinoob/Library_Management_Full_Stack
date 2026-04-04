@@ -83,6 +83,8 @@ export const categoryService = {
 export const bookService = {
     getAll: () => api.get<Book[]>('/books'),
 
+    getById: (id: number | string) => api.get<Book>(`/books/${id}`),
+
     create: (data: BookFormData) =>
         api.post<{ message: string; book: Book }>('/books', data),
 

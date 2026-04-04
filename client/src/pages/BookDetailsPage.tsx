@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, BookOpen, CalendarDays, Library, MapPin, Tag } from 'lucide-react';
 import { bookService } from '@/lib/api';
@@ -18,28 +18,29 @@ const statusConfig: Record<
 export default function BookDetailsPage() {
     const { bookId } = useParams();
     const navigate = useNavigate();
-    const [books, setBooks] = useState<Book[]>([]);
+    const [book, setBook] = useState<Book | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchBooks = async () => {
+        const fetchBook = async () => {
+            if (!bookId) {
+                setBook(null);
+                setLoading(false);
+                return;
+            }
+
             try {
-                const { data } = await bookService.getAll();
-                setBooks(data);
+                const { data } = await bookService.getById(bookId);
+                setBook(data);
             } catch {
-                setBooks([]);
+                setBook(null);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchBooks();
-    }, []);
-
-    const book = useMemo(
-        () => books.find((item) => item.id === Number(bookId)) ?? null,
-        [books, bookId],
-    );
+        fetchBook();
+    }, [bookId]);
 
     if (loading) {
         return (

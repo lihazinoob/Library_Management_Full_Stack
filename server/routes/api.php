@@ -27,9 +27,11 @@ Route::prefix('auth')->group(function(){
 Route::middleware(['auth:api'])->group(function () {
     Route::get('/categories', [CategoryController::class, 'index']);
     Route::get('/books', [BookController::class, 'index']);
+    Route::get('/books/{book}', [BookController::class, 'show']);
 });
 
 Route::middleware(['auth:api', 'admin'])->group(function () {
+    Route::get('/categories/{category}', [CategoryController::class, 'show']);
     Route::post('/categories', [CategoryController::class, 'store']);
     Route::put('/categories/{category}', [CategoryController::class, 'update']);
     Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);

@@ -19,6 +19,15 @@ class CategoryController extends Controller
         return response()->json($categories);
     }
 
+    public function show(Category $category): JsonResponse
+    {
+        return response()->json(
+            $category->load([
+                'books' => fn ($query) => $query->with('category')->orderBy('title'),
+            ])->loadCount('books')
+        );
+    }
+
     public function store(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [

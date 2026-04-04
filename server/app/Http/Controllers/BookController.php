@@ -22,6 +22,13 @@ class BookController extends Controller
         return response()->json($books);
     }
 
+    public function show(Book $book): JsonResponse
+    {
+        return response()->json(
+            $book->load('category')
+        );
+    }
+
     public function store(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), $this->rules());
