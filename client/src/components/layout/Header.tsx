@@ -10,7 +10,10 @@ const pageTitles: Record<string, string> = {
 
 export default function Header() {
     const location = useLocation();
-    const title = pageTitles[location.pathname] || 'Readora';
+    const title =
+        location.pathname.startsWith('/books/')
+            ? 'Book Details'
+            : pageTitles[location.pathname] || 'Readora';
 
     return (
         <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">

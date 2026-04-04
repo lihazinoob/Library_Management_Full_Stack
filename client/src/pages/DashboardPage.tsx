@@ -4,9 +4,11 @@ import { bookService, categoryService } from '@/lib/api';
 import type { Book, Category } from '@/types';
 import StatsCard from '@/components/shared/StatsCard';
 import { BookOpen, FolderTree, BookCheck, Users } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export default function DashboardPage() {
     const { user, isAdmin } = useAuth();
+    const navigate = useNavigate();
     const [books, setBooks] = useState<Book[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(true);
@@ -63,6 +65,7 @@ export default function DashboardPage() {
                     value={totalBooks}
                     description="Books in the library"
                     icon={<BookOpen className="h-4 w-4" />}
+                    onClick={() => navigate('/books')}
                 />
                 <StatsCard
                     title="Available"
@@ -75,6 +78,7 @@ export default function DashboardPage() {
                     value={totalCategories}
                     description="Active categories"
                     icon={<FolderTree className="h-4 w-4" />}
+                    onClick={() => navigate('/categories')}
                 />
                 <StatsCard
                     title="Out of Stock"

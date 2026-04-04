@@ -6,6 +6,7 @@ interface StatsCardProps {
     value: string | number;
     description?: string;
     icon: ReactNode;
+    onClick?: () => void;
 }
 
 export default function StatsCard({
@@ -13,9 +14,13 @@ export default function StatsCard({
     value,
     description,
     icon,
+    onClick,
 }: StatsCardProps) {
     return (
-        <Card>
+        <Card
+            className={onClick ? 'cursor-pointer transition-shadow hover:shadow-md' : undefined}
+            onClick={onClick}
+        >
             <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                     {title}

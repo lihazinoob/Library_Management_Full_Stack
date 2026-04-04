@@ -31,14 +31,11 @@ import {
 const navItems = [
     { title: 'Dashboard', icon: LayoutDashboard, href: '/' },
     { title: 'Books', icon: BookOpen, href: '/books' },
-];
-
-const adminItems = [
     { title: 'Categories', icon: FolderTree, href: '/categories' },
 ];
 
 export default function AppSidebar() {
-    const { user, isAdmin, logout } = useAuth();
+    const { user, logout } = useAuth();
     const location = useLocation();
 
     const getInitials = (name: string) =>
@@ -91,28 +88,6 @@ export default function AppSidebar() {
                         </SidebarMenu>
                     </SidebarGroupContent>
                 </SidebarGroup>
-
-                {isAdmin && (
-                    <SidebarGroup>
-                        <SidebarGroupLabel>Administration</SidebarGroupLabel>
-                        <SidebarGroupContent>
-                            <SidebarMenu>
-                                {adminItems.map((item) => (
-                                    <SidebarMenuItem key={item.href}>
-                                        <SidebarMenuButton
-                                            isActive={location.pathname === item.href}
-                                            tooltip={item.title}
-                                            render={<Link to={item.href} />}
-                                        >
-                                            <item.icon />
-                                            <span>{item.title}</span>
-                                        </SidebarMenuButton>
-                                    </SidebarMenuItem>
-                                ))}
-                            </SidebarMenu>
-                        </SidebarGroupContent>
-                    </SidebarGroup>
-                )}
             </SidebarContent>
 
             <SidebarFooter>
