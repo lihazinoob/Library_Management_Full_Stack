@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { categoryService } from '@/lib/api';
 import type { Category } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,7 @@ import DeleteConfirmDialog from '@/components/shared/DeleteConfirmDialog';
 import { Plus, MoreVertical, Pencil, Trash2, FolderTree } from 'lucide-react';
 
 export default function CategoriesPage() {
+    const { isAdmin } = useAuth();
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -89,18 +91,22 @@ export default function CategoriesPage() {
                 <div>
                     <h2 className="text-2xl font-bold tracking-tight">Categories</h2>
                     <p className="text-muted-foreground">
-                        Manage book categories and classifications
+                        {isAdmin
+                            ? 'Manage book categories and classifications'
+                            : 'Browse all book categories and classifications'}
                     </p>
                 </div>
-                <Button
-                    onClick={() => {
-                        setEditingCategory(null);
-                        setFormOpen(true);
-                    }}
-                >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Category
-                </Button>
+                {isAdmin && (
+                    <Button
+                        onClick={() => {
+                            setEditingCategory(null);
+                            setFormOpen(true);
+                        }}
+                    >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Category
+                    </Button>
+                )}
             </div>
 
             {/* Table */}
@@ -123,7 +129,7 @@ export default function CategoriesPage() {
                                     Description
                                 </TableHead>
                                 <TableHead>Status</TableHead>
-                                <TableHead className="w-12" />
+                                {isAdmin && <TableHead className="w-12" />}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -143,35 +149,37 @@ export default function CategoriesPage() {
                                             {category.is_active ? 'Active' : 'Inactive'}
                                         </Badge>
                                     </TableCell>
-                                    <TableCell>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger
-                                                render={
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8" />
-                                                }
-                                            >
-                                                <MoreVertical className="h-4 w-4" />
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem
-                                                    onClick={() => handleEdit(category)}
+                                    {isAdmin && (
+                                        <TableCell>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger
+                                                    render={
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8" />
+                                                    }
                                                 >
-                                                    <Pencil className="mr-2 h-4 w-4" />
-                                                    Edit
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    variant="destructive"
-                                                    onClick={() => {
-                                                        setDeletingCategory(category);
-                                                        setDeleteOpen(true);
-                                                    }}
-                                                >
-                                                    <Trash2 className="mr-2 h-4 w-4" />
-                                                    Delete
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
+                                                    <MoreVertical className="h-4 w-4" />
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem
+                                                        onClick={() => handleEdit(category)}
+                                                    >
+                                                        <Pencil className="mr-2 h-4 w-4" />
+                                                        Edit
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        variant="destructive"
+                                                        onClick={() => {
+                                                            setDeletingCategory(category);
+                                                            setDeleteOpen(true);
+                                                        }}
+                                                    >
+                                                        <Trash2 className="mr-2 h-4 w-4" />
+                                                        Delete
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    )}
                                 </TableRow>
                             ))}
                         </TableBody>
@@ -180,21 +188,25 @@ export default function CategoriesPage() {
             )}
 
             {/* Dialogs */}
-            <CategoryFormDialog
-                open={formOpen}
-                onOpenChange={setFormOpen}
-                category={editingCategory}
-                onSuccess={handleFormSuccess}
-            />
+            {isAdmin && (
+                <>
+                    <CategoryFormDialog
+                        open={formOpen}
+                        onOpenChange={setFormOpen}
+                        category={editingCategory}
+                        onSuccess={handleFormSuccess}
+                    />
 
-            <DeleteConfirmDialog
-                open={deleteOpen}
-                onOpenChange={setDeleteOpen}
-                title="Delete Category"
-                description={`Are you sure you want to delete "${deletingCategory?.name}"? This action cannot be undone.`}
-                onConfirm={handleDelete}
-                isLoading={deleteLoading}
-            />
+                    <DeleteConfirmDialog
+                        open={deleteOpen}
+                        onOpenChange={setDeleteOpen}
+                        title="Delete Category"
+                        description={`Are you sure you want to delete "${deletingCategory?.name}"? This action cannot be undone.`}
+                        onConfirm={handleDelete}
+                        isLoading={deleteLoading}
+                    />
+                </>
+            )}
         </div>
     );
 }

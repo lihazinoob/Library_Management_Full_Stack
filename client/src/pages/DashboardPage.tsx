@@ -78,6 +78,7 @@ export default function DashboardPage() {
                     value={totalCategories}
                     description="Active categories"
                     icon={<FolderTree className="h-4 w-4" />}
+                    onClick={() => navigate('/categories')}
                 />
                 <StatsCard
                     title="Out of Stock"

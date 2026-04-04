@@ -45,14 +45,7 @@ export default function App() {
       >
         <Route index element={<DashboardPage />} />
         <Route path="books" element={<BooksPage />} />
-        <Route
-          path="categories"
-          element={
-            <ProtectedRoute adminOnly>
-              <CategoriesPage />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="categories" element={<CategoriesPage />} />
       </Route>
 
       {/* Catch-all */}
