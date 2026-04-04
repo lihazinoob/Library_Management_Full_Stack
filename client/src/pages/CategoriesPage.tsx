@@ -4,6 +4,7 @@ import { categoryService } from '@/lib/api';
 import type { Category } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Link } from 'react-router-dom';
 import {
     Table,
     TableBody,
@@ -93,7 +94,7 @@ export default function CategoriesPage() {
                     <p className="text-muted-foreground">
                         {isAdmin
                             ? 'Manage book categories and classifications'
-                            : 'Browse all book categories and classifications'}
+                            : 'Explore the library through curated categories.'}
                     </p>
                 </div>
                 {isAdmin && (
@@ -115,10 +116,12 @@ export default function CategoriesPage() {
                     <FolderTree className="h-12 w-12 text-muted-foreground/50" />
                     <h3 className="mt-4 text-lg font-medium">No categories yet</h3>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        Create your first category to organize books.
+                        {isAdmin
+                            ? 'Create your first category to organize books.'
+                            : 'Categories will appear here once the library is organized.'}
                     </p>
                 </div>
-            ) : (
+            ) : isAdmin ? (
                 <div className="rounded-lg border">
                     <Table>
                         <TableHeader>
@@ -184,6 +187,65 @@ export default function CategoriesPage() {
                             ))}
                         </TableBody>
                     </Table>
+                </div>
+            ) : (
+                <div className="space-y-6">
+                    <div className="rounded-2xl border bg-gradient-to-r from-emerald-50 via-white to-amber-50 p-6">
+                        <div className="max-w-2xl space-y-2">
+                            <p className="text-sm font-medium text-emerald-700">
+                                Library explorer
+                            </p>
+                            <h3 className="text-2xl font-semibold tracking-tight">
+                                Find your next read by browsing categories
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                                Start with a topic that interests you, then explore the
+                                books collected under it.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                        {categories.map((category) => (
+                            <Link
+                                key={category.id}
+                                to="/books"
+                                className="group rounded-2xl border bg-card p-5 transition-all hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg"
+                            >
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                                        <FolderTree className="h-5 w-5" />
+                                    </div>
+                                    <Badge
+                                        variant={category.is_active ? 'default' : 'secondary'}
+                                    >
+                                        {category.is_active ? 'Active' : 'Inactive'}
+                                    </Badge>
+                                </div>
+
+                                <div className="mt-5 space-y-3">
+                                    <div>
+                                        <h3 className="text-lg font-semibold tracking-tight">
+                                            {category.name}
+                                        </h3>
+                                        <p className="mt-1 text-sm text-muted-foreground">
+                                            {category.description ||
+                                                'Browse books grouped under this category.'}
+                                        </p>
+                                    </div>
+
+                                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                        <span className="rounded-full bg-muted px-2.5 py-1">
+                                            {category.slug}
+                                        </span>
+                                        <span className="font-medium text-primary transition-transform group-hover:translate-x-1">
+                                            Explore books
+                                        </span>
+                                    </div>
+                                </div>
+                            </Link>
+                        ))}
+                    </div>
                 </div>
             )}
 
