@@ -13,6 +13,8 @@ export default function Header() {
     const title =
         location.pathname.startsWith('/books/')
             ? 'Book Details'
+            : location.pathname.startsWith('/categories/')
+                ? 'Category Details'
             : pageTitles[location.pathname] || 'Readora';
 
     return (

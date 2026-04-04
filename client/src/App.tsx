@@ -8,6 +8,7 @@ import DashboardPage from '@/pages/DashboardPage';
 import BooksPage from '@/pages/BooksPage';
 import CategoriesPage from '@/pages/CategoriesPage';
 import BookDetailsPage from '@/pages/BookDetailsPage';
+import CategoryDetailsPage from '@/pages/CategoryDetailsPage';
 
 export default function App() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -48,6 +49,14 @@ export default function App() {
         <Route path="books" element={<BooksPage />} />
         <Route path="books/:bookId" element={<BookDetailsPage />} />
         <Route path="categories" element={<CategoriesPage />} />
+        <Route
+          path="categories/:categoryId"
+          element={
+            <ProtectedRoute adminOnly>
+              <CategoryDetailsPage />
+            </ProtectedRoute>
+          }
+        />
       </Route>
 
       {/* Catch-all */}

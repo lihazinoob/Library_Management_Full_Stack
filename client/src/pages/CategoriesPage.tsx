@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import CategoryFormDialog from '@/components/categories/CategoryFormDialog';
 import DeleteConfirmDialog from '@/components/shared/DeleteConfirmDialog';
-import { Plus, MoreVertical, Pencil, Trash2, FolderTree } from 'lucide-react';
+import { Plus, MoreVertical, Pencil, Trash2, FolderTree, Eye } from 'lucide-react';
 
 export default function CategoriesPage() {
     const { isAdmin } = useAuth();
@@ -175,6 +175,14 @@ export default function CategoriesPage() {
                                                     <MoreVertical className="h-4 w-4" />
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem
+                                                        render={
+                                                            <Link to={`/categories/${category.id}`} />
+                                                        }
+                                                    >
+                                                        <Eye className="mr-2 h-4 w-4" />
+                                                        View details
+                                                    </DropdownMenuItem>
                                                     <DropdownMenuItem
                                                         onClick={() => handleEdit(category)}
                                                     >

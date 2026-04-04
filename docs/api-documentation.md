@@ -59,10 +59,12 @@ The route access currently works like this:
 - `POST /api/auth/refresh`
 - `GET /api/auth/me`
 - `GET /api/categories`
+- `GET /api/categories/{category}`
 - `POST /api/categories`
 - `PUT /api/categories/{category}`
 - `DELETE /api/categories/{category}`
 - `GET /api/books`
+- `GET /api/books/{book}`
 - `POST /api/books`
 - `PUT /api/books/{book}`
 - `DELETE /api/books/{book}`
@@ -88,6 +90,14 @@ If an authenticated user is a `member`, the backend returns:
 ```
 
 with HTTP `403 Forbidden`.
+
+Category detail endpoint access rule:
+
+- `GET /api/categories/{category}` is available only to authenticated admins
+
+Book detail endpoint access rule:
+
+- `GET /api/books/{book}` is available to any authenticated user
 
 ## Standard Response Shape For Successful Login/Register
 
@@ -591,6 +601,109 @@ Example response:
 
 ## 7. Create Category
 
+## 7. Get Single Category Details
+
+### Endpoint
+
+```http
+GET /api/categories/{category}
+```
+
+### Description
+
+Returns one category by ID with full admin-facing detail.
+
+### Access Rule
+
+Only an authenticated user with `role = admin` can access this endpoint.
+
+### Headers
+
+```http
+Authorization: Bearer <your_jwt_token>
+Accept: application/json
+```
+
+### Response Notes
+
+The current controller returns:
+
+- the category base fields
+- `books_count`
+- `books` ordered by title
+- each returned book includes its related `category`
+
+### Success Response
+
+HTTP status:
+
+```text
+200 OK
+```
+
+Example response:
+
+```json
+{
+  "id": 2,
+  "name": "Programming",
+  "slug": "programming",
+  "description": "Programming and software books",
+  "is_active": true,
+  "created_at": "2026-03-19T08:00:00.000000Z",
+  "updated_at": "2026-03-19T08:00:00.000000Z",
+  "books_count": 2,
+  "books": [
+    {
+      "id": 1,
+      "category_id": 2,
+      "title": "Clean Architecture",
+      "author": "Robert C. Martin",
+      "isbn": "9780134494166",
+      "publisher": "Prentice Hall",
+      "publication_year": 2017,
+      "edition": null,
+      "language": "English",
+      "description": "A guide to software architecture and design principles.",
+      "cover_image": null,
+      "total_copies": 5,
+      "available_copies": 3,
+      "shelf_location": "A-12",
+      "status": "available",
+      "created_by": 1,
+      "updated_by": 1,
+      "created_at": "2026-03-20T08:00:00.000000Z",
+      "updated_at": "2026-03-20T08:15:00.000000Z",
+      "category": {
+        "id": 2,
+        "name": "Programming",
+        "slug": "programming",
+        "description": "Programming and software books",
+        "is_active": true,
+        "created_at": "2026-03-19T08:00:00.000000Z",
+        "updated_at": "2026-03-19T08:00:00.000000Z"
+      }
+    }
+  ]
+}
+```
+
+### Forbidden Response For Member User
+
+HTTP status:
+
+```text
+403 Forbidden
+```
+
+```json
+{
+  "message": "Only admins can perform this action."
+}
+```
+
+## 8. Create Category
+
 ### Endpoint
 
 ```http
@@ -687,7 +800,7 @@ HTTP status:
 }
 ```
 
-## 8. Update Category
+## 9. Update Category
 
 ### Endpoint
 
@@ -756,7 +869,7 @@ Example response:
 }
 ```
 
-## 9. Delete Category
+## 10. Delete Category
 
 ### Endpoint
 
@@ -791,10 +904,11 @@ HTTP status:
 {
   "message": "Category deleted successfully."
 }
+```
 
 ## Book Endpoints
 
-## 10. Get All Books
+## 11. Get All Books
 
 ### Endpoint
 
@@ -862,7 +976,73 @@ Example response:
 ]
 ```
 
-## 11. Create Book
+## 12. Get Single Book
+
+### Endpoint
+
+```http
+GET /api/books/{book}
+```
+
+### Description
+
+Returns one book by ID with its related category.
+
+### Access Rule
+
+This endpoint requires a valid JWT token.
+
+### Headers
+
+```http
+Authorization: Bearer <your_jwt_token>
+Accept: application/json
+```
+
+### Success Response
+
+HTTP status:
+
+```text
+200 OK
+```
+
+Example response:
+
+```json
+{
+  "id": 1,
+  "category_id": 2,
+  "title": "Clean Architecture",
+  "author": "Robert C. Martin",
+  "isbn": "9780134494166",
+  "publisher": "Prentice Hall",
+  "publication_year": 2017,
+  "edition": null,
+  "language": "English",
+  "description": "A guide to software architecture and design principles.",
+  "cover_image": null,
+  "total_copies": 5,
+  "available_copies": 3,
+  "shelf_location": "A-12",
+  "status": "available",
+  "created_by": 1,
+  "updated_by": 1,
+  "created_at": "2026-03-20T08:00:00.000000Z",
+  "updated_at": "2026-03-20T08:15:00.000000Z",
+  "category": {
+    "id": 2,
+    "name": "Programming",
+    "slug": "programming",
+    "description": "Programming and software books",
+    "is_active": true,
+    "created_at": "2026-03-19T08:00:00.000000Z",
+    "updated_at": "2026-03-19T08:00:00.000000Z"
+  }
+}
+```
+
+## 13. Create Book
 
 ### Endpoint
 
@@ -1004,7 +1184,7 @@ HTTP status:
 }
 ```
 
-## 12. Update Book
+## 14. Update Book
 
 ### Endpoint
 
@@ -1108,7 +1288,7 @@ Example response:
 }
 ```
 
-## 13. Delete Book
+## 15. Delete Book
 
 ### Endpoint
 
@@ -1144,7 +1324,6 @@ HTTP status:
   "message": "Book deleted successfully."
 }
 ```
-```
 
 ## Frontend Integration Notes
 
@@ -1155,11 +1334,13 @@ For a React frontend, the typical flow is:
 3. Send `Authorization: Bearer <token>` in protected requests
 4. Call `GET /api/auth/me` to restore logged-in user state
 5. Call `GET /api/categories` after login to load the category list
-6. Call `GET /api/books` after login to load the book list
-7. If the user is an admin, call `POST`, `PUT`, and `DELETE` on `/api/categories`
-8. If the user is an admin, call `POST`, `PUT`, and `DELETE` on `/api/books`
-9. Call `POST /api/auth/refresh` when the token expires
-10. Call `POST /api/auth/logout` when signing out
+6. If the user is an admin and needs category detail, call `GET /api/categories/{category}`
+7. Call `GET /api/books` after login to load the book list
+8. Call `GET /api/books/{book}` when the frontend needs a single book details page
+9. If the user is an admin, call `POST`, `PUT`, and `DELETE` on `/api/categories`
+10. If the user is an admin, call `POST`, `PUT`, and `DELETE` on `/api/books`
+11. Call `POST /api/auth/refresh` when the token expires
+12. Call `POST /api/auth/logout` when signing out
 
 ## Important Implementation Note
 
@@ -1203,10 +1384,12 @@ Authorization: Bearer <your_jwt_token>
 | `POST` | `/api/auth/logout` | Yes | Log out current user |
 | `POST` | `/api/auth/refresh` | Yes | Refresh JWT token |
 | `GET` | `/api/categories` | Yes | Get all categories |
+| `GET` | `/api/categories/{category}` | Yes, admin only | Get one category with detailed admin-facing data |
 | `POST` | `/api/categories` | Yes, admin only | Create a category |
 | `PUT` | `/api/categories/{category}` | Yes, admin only | Update a category |
 | `DELETE` | `/api/categories/{category}` | Yes, admin only | Delete a category |
 | `GET` | `/api/books` | Yes | Get all books |
+| `GET` | `/api/books/{book}` | Yes | Get one book with its related category |
 | `POST` | `/api/books` | Yes, admin only | Create a book |
 | `PUT` | `/api/books/{book}` | Yes, admin only | Update a book |
 | `DELETE` | `/api/books/{book}` | Yes, admin only | Delete a book |

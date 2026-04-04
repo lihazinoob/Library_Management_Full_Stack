@@ -5,6 +5,7 @@ import type {
     RegisterData,
     User,
     Category,
+    CategoryDetails,
     CategoryFormData,
     Book,
     BookFormData,
@@ -67,6 +68,8 @@ export const authService = {
 
 export const categoryService = {
     getAll: () => api.get<Category[]>('/categories'),
+
+    getById: (id: number | string) => api.get<CategoryDetails>(`/categories/${id}`),
 
     create: (data: CategoryFormData) =>
         api.post<{ message: string; category: Category }>('/categories', data),

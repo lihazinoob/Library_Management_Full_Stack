@@ -44,6 +44,11 @@ export interface Category {
     updated_at: string;
 }
 
+export interface CategoryDetails extends Category {
+    books_count: number;
+    books: Book[];
+}
+
 export interface CategoryFormData {
     name: string;
     slug: string;
