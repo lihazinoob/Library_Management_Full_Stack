@@ -7,6 +7,7 @@ import RegisterPage from '@/pages/RegisterPage';
 import DashboardPage from '@/pages/DashboardPage';
 import BooksPage from '@/pages/BooksPage';
 import CategoriesPage from '@/pages/CategoriesPage';
+import BookDetailsPage from '@/pages/BookDetailsPage';
 
 export default function App() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -45,6 +46,7 @@ export default function App() {
       >
         <Route index element={<DashboardPage />} />
         <Route path="books" element={<BooksPage />} />
+        <Route path="books/:bookId" element={<BookDetailsPage />} />
         <Route path="categories" element={<CategoriesPage />} />
       </Route>
 

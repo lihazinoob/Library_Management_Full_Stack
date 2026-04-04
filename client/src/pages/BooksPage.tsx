@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { bookService, categoryService } from '@/lib/api';
 import type { Book, Category } from '@/types';
@@ -394,9 +394,12 @@ export default function BooksPage() {
                                                     ? `Published ${book.publication_year}`
                                                     : 'Publication year not listed'}
                                             </span>
-                                            <span className="text-sm font-medium text-primary">
+                                            <Link
+                                                to={`/books/${book.id}`}
+                                                className="text-sm font-medium text-primary hover:underline"
+                                            >
                                                 View details
-                                            </span>
+                                            </Link>
                                         </div>
                                     )}
                                 </div>

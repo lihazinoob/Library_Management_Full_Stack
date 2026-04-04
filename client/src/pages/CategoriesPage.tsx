@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { categoryService } from '@/lib/api';
-import type { Category } from '@/types';
+import { bookService, categoryService } from '@/lib/api';
+import type { Book, Category } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
@@ -26,6 +26,7 @@ import { Plus, MoreVertical, Pencil, Trash2, FolderTree } from 'lucide-react';
 export default function CategoriesPage() {
     const { isAdmin } = useAuth();
     const [categories, setCategories] = useState<Category[]>([]);
+    const [books, setBooks] = useState<Book[]>([]);
     const [loading, setLoading] = useState(true);
 
     // Dialog state
@@ -39,8 +40,12 @@ export default function CategoriesPage() {
 
     const fetchCategories = async () => {
         try {
-            const { data } = await categoryService.getAll();
-            setCategories(data);
+            const [categoriesResponse, booksResponse] = await Promise.all([
+                categoryService.getAll(),
+                bookService.getAll(),
+            ]);
+            setCategories(categoriesResponse.data);
+            setBooks(booksResponse.data);
         } catch {
             // empty
         } finally {
@@ -76,6 +81,13 @@ export default function CategoriesPage() {
         fetchCategories();
         setEditingCategory(null);
     };
+
+    const bookCountsByCategory = useMemo(() => {
+        return books.reduce<Record<number, number>>((counts, book) => {
+            counts[book.category_id] = (counts[book.category_id] ?? 0) + 1;
+            return counts;
+        }, {});
+    }, [books]);
 
     if (loading) {
         return (
@@ -209,7 +221,7 @@ export default function CategoriesPage() {
                         {categories.map((category) => (
                             <Link
                                 key={category.id}
-                                to="/books"
+                                to={`/books?category=${encodeURIComponent(category.slug)}`}
                                 className="group rounded-2xl border bg-card p-5 transition-all hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg"
                             >
                                 <div className="flex items-start justify-between gap-3">
@@ -236,7 +248,8 @@ export default function CategoriesPage() {
 
                                     <div className="flex items-center justify-between text-xs text-muted-foreground">
                                         <span className="rounded-full bg-muted px-2.5 py-1">
-                                            {category.slug}
+                                            {bookCountsByCategory[category.id] ?? 0} book
+                                            {(bookCountsByCategory[category.id] ?? 0) !== 1 ? 's' : ''}
                                         </span>
                                         <span className="font-medium text-primary transition-transform group-hover:translate-x-1">
                                             Explore books
