@@ -55,6 +55,16 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(IssuedBook::class);
     }
 
+    public function issuedBooksCreated(): HasMany
+    {
+        return $this->hasMany(IssuedBook::class, 'issued_by');
+    }
+
+    public function issuedBooksReceived(): HasMany
+    {
+        return $this->hasMany(IssuedBook::class, 'received_by');
+    }
+
     public function chatbotConversations(): HasMany
     {
         return $this->hasMany(ChatbotConversation::class);
