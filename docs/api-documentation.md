@@ -11,15 +11,22 @@ The documentation is based on these files:
 - [Category.php](D:\Learning_Education_and_Application\Tution\Library_Management_System\server\app\Models\Category.php)
 - [AuthController.php](D:\Learning_Education_and_Application\Tution\Library_Management_System\server\app\Http\Controllers\Auth\AuthController.php)
 - [CategoryController.php](D:\Learning_Education_and_Application\Tution\Library_Management_System\server\app\Http\Controllers\CategoryController.php)
+- [ReservationController.php](D:\Learning_Education_and_Application\Tution\Library_Management_System\server\app\Http\Controllers\ReservationController.php)
+- [ReservationService.php](D:\Learning_Education_and_Application\Tution\Library_Management_System\server\app\Services\ReservationService.php)
+- [StoreReservationRequest.php](D:\Learning_Education_and_Application\Tution\Library_Management_System\server\app\Http\Requests\StoreReservationRequest.php)
+- [RejectReservationRequest.php](D:\Learning_Education_and_Application\Tution\Library_Management_System\server\app\Http\Requests\RejectReservationRequest.php)
 - [AdminMiddleware.php](D:\Learning_Education_and_Application\Tution\Library_Management_System\server\app\Http\Middleware\AdminMiddleware.php)
 
 ## Overview
 
-The backend currently exposes two API areas:
+The backend currently exposes these API areas:
 
 - authentication APIs under `/api/auth`
 - category management APIs under `/api/categories`
 - book management APIs under `/api/books`
+- reservation APIs under `/api/reservations`
+- member reservation listing under `/api/my-reservations`
+- admin reservation review APIs under `/api/admin/reservations`
 
 Current authentication and authorization strategy:
 
@@ -31,6 +38,8 @@ Current authentication and authorization strategy:
 - Category write operations require both `auth:api` and custom `admin` middleware
 - Book read operations require `auth:api`
 - Book write operations require both `auth:api` and custom `admin` middleware
+- Member reservation create/list/cancel operations require `auth:api`
+- Admin reservation review operations require both `auth:api` and custom `admin` middleware
 
 This means the project is using **JWT-based authentication** and **role-based authorization** for protected API actions.
 
@@ -68,6 +77,13 @@ The route access currently works like this:
 - `POST /api/books`
 - `PUT /api/books/{book}`
 - `DELETE /api/books/{book}`
+- `POST /api/reservations`
+- `GET /api/my-reservations`
+- `DELETE /api/reservations/{reservation}`
+- `GET /api/admin/reservations`
+- `GET /api/admin/reservations/{reservation}`
+- `PATCH /api/admin/reservations/{reservation}/approve`
+- `PATCH /api/admin/reservations/{reservation}/reject`
 
 Protected endpoints require this header:
 
@@ -98,6 +114,13 @@ Category detail endpoint access rule:
 Book detail endpoint access rule:
 
 - `GET /api/books/{book}` is available to any authenticated user
+
+Reservation endpoint access rules:
+
+- `POST /api/reservations` is available only to authenticated users with `role = member`
+- `GET /api/my-reservations` is available to any authenticated user, but returns only that user's own reservations
+- `DELETE /api/reservations/{reservation}` is available to any authenticated user, but a user may only cancel their own reservation
+- `GET /api/admin/reservations`, `GET /api/admin/reservations/{reservation}`, `PATCH /api/admin/reservations/{reservation}/approve`, and `PATCH /api/admin/reservations/{reservation}/reject` are available only to authenticated admins
 
 ## Standard Response Shape For Successful Login/Register
 
@@ -207,6 +230,22 @@ Response:
 ```json
 {
   "message": "Unauthenticated."
+}
+```
+
+Reservation conflict error example:
+
+HTTP status:
+
+```text
+409 Conflict
+```
+
+Response:
+
+```json
+{
+  "message": "This book is not available for reservation."
 }
 ```
 
@@ -1325,6 +1364,610 @@ HTTP status:
 }
 ```
 
+## Reservation Endpoints
+
+## 16. Create Reservation
+
+### Endpoint
+
+```http
+POST /api/reservations
+```
+
+### Description
+
+Creates a new reservation request for the authenticated member.
+
+### Access Rule
+
+Only an authenticated user with `role = member` can access this endpoint.
+
+### Headers
+
+```http
+Authorization: Bearer <your_jwt_token>
+Accept: application/json
+Content-Type: application/json
+```
+
+### Request Body
+
+```json
+{
+  "book_id": 1,
+  "notes": "Please keep this ready for pickup."
+}
+```
+
+### Request Fields
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `book_id` | integer | yes | Must exist in `books` table |
+| `notes` | string | no | Optional member note for the reservation |
+
+### Reservation Rules
+
+- the authenticated user must be a `member`
+- the selected book must have `status = available`
+- the selected book must have `available_copies > 0`
+- the same user cannot create another active reservation for the same book
+- the same user cannot create a reservation if they already have an active issued record for that book
+- the backend generates a unique `reservation_code`
+- `reserved_at` is set automatically
+- `expires_at` is currently set to `2` days after creation
+- the initial status is `pending`
+
+### Success Response
+
+HTTP status:
+
+```text
+201 Created
+```
+
+Example response:
+
+```json
+{
+  "message": "Reservation request submitted successfully.",
+  "reservation": {
+    "id": 1,
+    "user_id": 5,
+    "book_id": 1,
+    "reservation_code": "RSV-AB12CD34EF",
+    "reserved_at": "2026-04-05T12:00:00.000000Z",
+    "expires_at": "2026-04-07T12:00:00.000000Z",
+    "status": "pending",
+    "notes": "Please keep this ready for pickup.",
+    "created_at": "2026-04-05T12:00:00.000000Z",
+    "updated_at": "2026-04-05T12:00:00.000000Z",
+    "book": {
+      "id": 1,
+      "title": "Laravel Up and Running",
+      "author": "Matt Stauffer",
+      "status": "available",
+      "category": {
+        "id": 2,
+        "name": "Programming",
+        "slug": "programming"
+      }
+    },
+    "user": {
+      "id": 5,
+      "name": "John Doe",
+      "email": "john@example.com",
+      "role": "member",
+      "status": "active"
+    }
+  }
+}
+```
+
+### Conflict Response Examples
+
+If the book is not currently reservable:
+
+```json
+{
+  "message": "This book is not available for reservation."
+}
+```
+
+If the user already has an active reservation for the same book:
+
+```json
+{
+  "message": "You already have an active reservation for this book."
+}
+```
+
+If the user already has an active issued record for the same book:
+
+```json
+{
+  "message": "You already have an active issued record for this book."
+}
+```
+
+## 17. Get My Reservations
+
+### Endpoint
+
+```http
+GET /api/my-reservations
+```
+
+### Description
+
+Returns the reservation list for the authenticated user.
+
+### Access Rule
+
+Any authenticated user can access this endpoint, but it only returns their own reservations.
+
+### Headers
+
+```http
+Authorization: Bearer <your_jwt_token>
+Accept: application/json
+```
+
+### Success Response
+
+HTTP status:
+
+```text
+200 OK
+```
+
+Example response:
+
+```json
+[
+  {
+    "id": 1,
+    "user_id": 5,
+    "book_id": 1,
+    "reservation_code": "RSV-AB12CD34EF",
+    "reserved_at": "2026-04-05T12:00:00.000000Z",
+    "expires_at": "2026-04-07T12:00:00.000000Z",
+    "status": "pending",
+    "notes": null,
+    "created_at": "2026-04-05T12:00:00.000000Z",
+    "updated_at": "2026-04-05T12:00:00.000000Z",
+    "book": {
+      "id": 1,
+      "title": "Laravel Up and Running",
+      "author": "Matt Stauffer",
+      "status": "available",
+      "category": {
+        "id": 2,
+        "name": "Programming",
+        "slug": "programming"
+      }
+    }
+  }
+]
+```
+
+## 18. Cancel Reservation
+
+### Endpoint
+
+```http
+DELETE /api/reservations/{reservation}
+```
+
+### Description
+
+Cancels an existing reservation belonging to the authenticated user.
+
+### Access Rule
+
+Any authenticated user can access this endpoint, but the user may only cancel their own reservation.
+
+### Headers
+
+```http
+Authorization: Bearer <your_jwt_token>
+Accept: application/json
+```
+
+### Cancel Rules
+
+- the reservation must belong to the authenticated user
+- only reservations with `pending` or `approved` status can be cancelled
+- the backend sets the status to `cancelled`
+
+### Success Response
+
+HTTP status:
+
+```text
+200 OK
+```
+
+Example response:
+
+```json
+{
+  "message": "Reservation cancelled successfully.",
+  "reservation": {
+    "id": 1,
+    "user_id": 5,
+    "book_id": 1,
+    "reservation_code": "RSV-AB12CD34EF",
+    "reserved_at": "2026-04-05T12:00:00.000000Z",
+    "expires_at": "2026-04-07T12:00:00.000000Z",
+    "status": "cancelled",
+    "notes": null,
+    "created_at": "2026-04-05T12:00:00.000000Z",
+    "updated_at": "2026-04-05T14:00:00.000000Z",
+    "book": {
+      "id": 1,
+      "title": "Laravel Up and Running",
+      "author": "Matt Stauffer",
+      "status": "available"
+    },
+    "user": {
+      "id": 5,
+      "name": "John Doe",
+      "email": "john@example.com",
+      "role": "member",
+      "status": "active"
+    }
+  }
+}
+```
+
+## 19. Get All Reservations For Admin
+
+### Endpoint
+
+```http
+GET /api/admin/reservations
+```
+
+### Description
+
+Returns all reservations for the admin review interface.
+
+### Access Rule
+
+Only an authenticated user with `role = admin` can access this endpoint.
+
+### Headers
+
+```http
+Authorization: Bearer <your_jwt_token>
+Accept: application/json
+```
+
+### Success Response
+
+HTTP status:
+
+```text
+200 OK
+```
+
+Example response:
+
+```json
+[
+  {
+    "id": 1,
+    "user_id": 5,
+    "book_id": 1,
+    "reservation_code": "RSV-AB12CD34EF",
+    "reserved_at": "2026-04-05T12:00:00.000000Z",
+    "expires_at": "2026-04-07T12:00:00.000000Z",
+    "status": "pending",
+    "notes": null,
+    "created_at": "2026-04-05T12:00:00.000000Z",
+    "updated_at": "2026-04-05T12:00:00.000000Z",
+    "book": {
+      "id": 1,
+      "title": "Laravel Up and Running",
+      "author": "Matt Stauffer",
+      "status": "available",
+      "category": {
+        "id": 2,
+        "name": "Programming",
+        "slug": "programming"
+      }
+    },
+    "user": {
+      "id": 5,
+      "name": "John Doe",
+      "email": "john@example.com",
+      "role": "member",
+      "status": "active"
+    }
+  }
+]
+```
+
+## 20. Get Reservation Details For Admin
+
+### Endpoint
+
+```http
+GET /api/admin/reservations/{reservation}
+```
+
+### Description
+
+Returns one reservation with related user, book, and issued record data for admin review.
+
+### Access Rule
+
+Only an authenticated user with `role = admin` can access this endpoint.
+
+### Headers
+
+```http
+Authorization: Bearer <your_jwt_token>
+Accept: application/json
+```
+
+### Success Response
+
+HTTP status:
+
+```text
+200 OK
+```
+
+Example response:
+
+```json
+{
+  "id": 1,
+  "user_id": 5,
+  "book_id": 1,
+  "reservation_code": "RSV-AB12CD34EF",
+  "reserved_at": "2026-04-05T12:00:00.000000Z",
+  "expires_at": "2026-04-07T12:00:00.000000Z",
+  "status": "approved",
+  "notes": null,
+  "created_at": "2026-04-05T12:00:00.000000Z",
+  "updated_at": "2026-04-05T12:30:00.000000Z",
+  "book": {
+    "id": 1,
+    "title": "Laravel Up and Running",
+    "author": "Matt Stauffer",
+    "status": "available",
+    "category": {
+      "id": 2,
+      "name": "Programming",
+      "slug": "programming"
+    }
+  },
+  "user": {
+    "id": 5,
+    "name": "John Doe",
+    "email": "john@example.com",
+    "role": "member",
+    "status": "active"
+  },
+  "issued_books": [
+    {
+      "id": 1,
+      "reservation_id": 1,
+      "status": "issued",
+      "issue_date": "2026-04-05",
+      "due_date": "2026-04-19"
+    }
+  ]
+}
+```
+
+## 21. Approve Reservation
+
+### Endpoint
+
+```http
+PATCH /api/admin/reservations/{reservation}/approve
+```
+
+### Description
+
+Approves a pending reservation, creates an issued book record, and updates book stock.
+
+### Access Rule
+
+Only an authenticated user with `role = admin` can access this endpoint.
+
+### Headers
+
+```http
+Authorization: Bearer <your_jwt_token>
+Accept: application/json
+Content-Type: application/json
+```
+
+### Approval Rules
+
+- only reservations with `status = pending` can be approved
+- the book must still have `status = available`
+- the book must still have `available_copies > 0`
+- the backend creates an `issued_books` record linked to the reservation
+- `issued_by` is set from the authenticated admin
+- `issue_date` is set to the current date
+- `due_date` is currently set to `14` days after approval
+- `available_copies` is decremented by `1`
+- the book status is recalculated to `available` or `out_of_stock`
+- the approval workflow runs inside a database transaction
+
+### Success Response
+
+HTTP status:
+
+```text
+200 OK
+```
+
+Example response:
+
+```json
+{
+  "message": "Reservation approved successfully.",
+  "reservation": {
+    "id": 1,
+    "user_id": 5,
+    "book_id": 1,
+    "reservation_code": "RSV-AB12CD34EF",
+    "reserved_at": "2026-04-05T12:00:00.000000Z",
+    "expires_at": "2026-04-07T12:00:00.000000Z",
+    "status": "approved",
+    "notes": null,
+    "created_at": "2026-04-05T12:00:00.000000Z",
+    "updated_at": "2026-04-05T12:30:00.000000Z"
+  },
+  "issued_book": {
+    "id": 1,
+    "user_id": 5,
+    "book_id": 1,
+    "reservation_id": 1,
+    "issue_date": "2026-04-05",
+    "due_date": "2026-04-19",
+    "return_date": null,
+    "status": "issued",
+    "issued_by": 1,
+    "received_by": null,
+    "fine_amount": "0.00",
+    "remarks": null,
+    "created_at": "2026-04-05T12:30:00.000000Z",
+    "updated_at": "2026-04-05T12:30:00.000000Z",
+    "book": {
+      "id": 1,
+      "title": "Laravel Up and Running",
+      "author": "Matt Stauffer",
+      "status": "available"
+    },
+    "user": {
+      "id": 5,
+      "name": "John Doe",
+      "email": "john@example.com"
+    },
+    "reservation": {
+      "id": 1,
+      "status": "approved"
+    },
+    "issued_by": {
+      "id": 1,
+      "name": "Admin User",
+      "email": "admin@example.com"
+    }
+  }
+}
+```
+
+### Conflict Response Examples
+
+If the reservation is no longer pending:
+
+```json
+{
+  "message": "Only pending reservations can be approved."
+}
+```
+
+If the book is no longer available:
+
+```json
+{
+  "message": "This book is no longer available for approval."
+}
+```
+
+## 22. Reject Reservation
+
+### Endpoint
+
+```http
+PATCH /api/admin/reservations/{reservation}/reject
+```
+
+### Description
+
+Rejects a reservation request by setting its status to `cancelled`.
+
+### Access Rule
+
+Only an authenticated user with `role = admin` can access this endpoint.
+
+### Headers
+
+```http
+Authorization: Bearer <your_jwt_token>
+Accept: application/json
+Content-Type: application/json
+```
+
+### Request Body
+
+```json
+{
+  "notes": "Requested copy is no longer available."
+}
+```
+
+### Request Fields
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `notes` | string | no | Optional admin note saved on the reservation |
+
+### Rejection Rules
+
+- only reservations with `pending` or `approved` status can be rejected
+- the backend currently stores rejection by setting `status = cancelled`
+- if `notes` is sent, it is stored on the reservation
+
+### Success Response
+
+HTTP status:
+
+```text
+200 OK
+```
+
+Example response:
+
+```json
+{
+  "message": "Reservation rejected successfully.",
+  "reservation": {
+    "id": 1,
+    "user_id": 5,
+    "book_id": 1,
+    "reservation_code": "RSV-AB12CD34EF",
+    "reserved_at": "2026-04-05T12:00:00.000000Z",
+    "expires_at": "2026-04-07T12:00:00.000000Z",
+    "status": "cancelled",
+    "notes": "Requested copy is no longer available.",
+    "created_at": "2026-04-05T12:00:00.000000Z",
+    "updated_at": "2026-04-05T12:45:00.000000Z",
+    "book": {
+      "id": 1,
+      "title": "Laravel Up and Running",
+      "author": "Matt Stauffer",
+      "status": "available"
+    },
+    "user": {
+      "id": 5,
+      "name": "John Doe",
+      "email": "john@example.com",
+      "role": "member",
+      "status": "active"
+    }
+  }
+}
+```
+
 ## Frontend Integration Notes
 
 For a React frontend, the typical flow is:
@@ -1339,8 +1982,14 @@ For a React frontend, the typical flow is:
 8. Call `GET /api/books/{book}` when the frontend needs a single book details page
 9. If the user is an admin, call `POST`, `PUT`, and `DELETE` on `/api/categories`
 10. If the user is an admin, call `POST`, `PUT`, and `DELETE` on `/api/books`
-11. Call `POST /api/auth/refresh` when the token expires
-12. Call `POST /api/auth/logout` when signing out
+11. If the user is a member, call `POST /api/reservations` to submit a reservation request
+12. If the user is a member, call `GET /api/my-reservations` to view their reservation list
+13. If the user needs to cancel their own reservation, call `DELETE /api/reservations/{reservation}`
+14. If the user is an admin, call `GET /api/admin/reservations` to review reservation requests
+15. If the user is an admin, call `PATCH /api/admin/reservations/{reservation}/approve` to approve and issue a book
+16. If the user is an admin, call `PATCH /api/admin/reservations/{reservation}/reject` to reject a reservation
+17. Call `POST /api/auth/refresh` when the token expires
+18. Call `POST /api/auth/logout` when signing out
 
 ## Important Implementation Note
 
@@ -1393,3 +2042,10 @@ Authorization: Bearer <your_jwt_token>
 | `POST` | `/api/books` | Yes, admin only | Create a book |
 | `PUT` | `/api/books/{book}` | Yes, admin only | Update a book |
 | `DELETE` | `/api/books/{book}` | Yes, admin only | Delete a book |
+| `POST` | `/api/reservations` | Yes, member only | Create a new reservation request |
+| `GET` | `/api/my-reservations` | Yes | Get the authenticated user's reservations |
+| `DELETE` | `/api/reservations/{reservation}` | Yes | Cancel the authenticated user's reservation |
+| `GET` | `/api/admin/reservations` | Yes, admin only | Get all reservations for admin review |
+| `GET` | `/api/admin/reservations/{reservation}` | Yes, admin only | Get one reservation with related details |
+| `PATCH` | `/api/admin/reservations/{reservation}/approve` | Yes, admin only | Approve a reservation and create an issued record |
+| `PATCH` | `/api/admin/reservations/{reservation}/reject` | Yes, admin only | Reject a reservation by marking it cancelled |
